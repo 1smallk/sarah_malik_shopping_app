@@ -4,98 +4,151 @@ import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.sarah_malik_shopping_app.ui.theme.Sarah_malik_shopping_appTheme
+import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            Sarah_malik_shopping_appTheme {
-                    Main2()
-                }
-            }
+            MultiPaneShoppingApp()
         }
     }
+}
 
+data class Product(val name: String, val price: String, val description: String)
 
-class Product(val letter: String, val price: String, val description: String)
 val products = listOf(
     Product("Product A", "$100", "This is a great product A."),
     Product("Product B", "$150", "This is product B with more features."),
-    Product("Product C", "$200", "Premium product C.")
+    Product("Product C", "$200", "Premium product C."),
+    Product("Product D", "$250", "Top-of-the-line product D."),
+    Product("Product E", "$300", "Exclusive product E with superior quality.")
 )
 
 @Composable
-fun ProductList(selectionChange: (Product) -> Unit){
-    LazyColumn {
-        item() { Spacer(Modifier.height(50.dp)) }
-        items(products) { TextButton(onClick = {selectionChange(it)}){ Text(it.letter)} }
-    }
-}
-
-@Composable
-fun SelectedItem(thing: Product){
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+fun ProductList(onProductSelected: (Product) -> Unit) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
-        Spacer(Modifier.height(50.dp))
-        Text(thing.letter)
-        Text(thing.price)
-        Text(thing.description)
+        items(products) { product ->
+            TextButton(
+                onClick = { onProductSelected(product) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = product.name,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+        }
     }
 }
 
 @Composable
-fun Main2 () {
-    var clicked by remember { mutableStateOf(false)}
-    var selected by remember { mutableStateOf(Product("No product selected","N/A", "N/A"))}
+fun ProductDetails(selectedProduct: Product?, onBackClicked: () -> Unit) {
+    if (selectedProduct != null) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = selectedProduct.name,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Price: ${selectedProduct.price}",
+                fontSize = 20.sp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = selectedProduct.description,
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(onClick = onBackClicked) {
+                Text("Back to Product List")
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Select a product to view details.",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun MultiPaneShoppingApp() {
+    var selectedProduct by remember { mutableStateOf<Product?>(null) }
     val configuration = LocalConfiguration.current
+
     when (configuration.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> {
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxSize()
             ) {
-                ProductList({selected = it})
-                SelectedItem(selected)
+                // Product List Pane
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    ProductList { product ->
+                        selectedProduct = product
+                    }
+                }
+
+                // Product Details Pane
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    ProductDetails(selectedProduct) {
+                        selectedProduct = null // Reset selection
+                    }
+                }
             }
         }
+
         else -> {
-            if (clicked) {
-                Column (
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    SelectedItem(selected)
-                    TextButton(onClick = { clicked = false }) { Text("Back") }
+            if (selectedProduct != null) {
+                // Display Product Details in Portrait Mode with Back Button
+                ProductDetails(selectedProduct) {
+                    selectedProduct = null // Reset selection
                 }
             } else {
-                ProductList({
-                    selected = it
-                    clicked = true
-                })
+                // Display Product List in Portrait Mode
+                ProductList { product ->
+                    selectedProduct = product
+                }
             }
         }
     }
